@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>E2E Test Report — {{UUID}}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #f8fafc;
+  --card: #fff;
+  --card2: #f1f5f9;
+  --border: #e2e8f0;
+  --text: #0f172a;
+  --text2: #64748b;
+  --text3: #94a3b8;
+  --accent: #6366f1;
+  --green: #10b981;
+  --red: #ef4444;
+  --amber: #f59e0b;
+  --r: 16px;
+  --r2: 10px;
+  --sh: 0 1px 2px rgba(0,0,0,.04);
+  --sh2: 0 4px 12px rgba(0,0,0,.06);
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: var(--bg); color: var(--text); min-height: 100vh; line-height: 1.5;
+}
+
+/* Layout */
+.wrap { max-width: 1480px; margin: 0 auto; padding: 40px 40px 56px; }
+
+/* Top bar */
+.topbar {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 40px; flex-wrap: wrap; gap: 16px;
+}
+.topbar h1 { font-size: 28px; font-weight: 900; letter-spacing: -1px; }
+.topbar .ver {
+  font-size: 12px; color: var(--text3); font-weight: 500;
+  background: var(--card2); padding: 4px 12px; border-radius: 6px;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* Hero card */
+.hero {
+  background: linear-gradient(135deg, #1e1b4b 0%, #312e81 40%, #4338ca 100%);
+  border-radius: var(--r); padding: 44px 48px; margin-bottom: 36px;
+  color: #e0e7ff; position: relative; overflow: hidden;
+}
+.hero::before {
+  content: ''; position: absolute; right: -40px; top: -60px;
+  width: 300px; height: 300px;
+  background: radial-gradient(circle, rgba(255,255,255,.06) 0%, transparent 70%);
+  pointer-events: none;
+}
+.hero-grid { display: flex; gap: 48px; align-items: center; flex-wrap: wrap; position: relative; z-index: 1; }
+.hero-info { flex: 1; min-width: 260px; }
+.hero-info .label { font-size: 11px; text-transform: uppercase; letter-spacing: 2px; opacity: .6; font-weight: 700; margin-bottom: 8px; }
+.hero-info h2 { font-size: 22px; font-weight: 800; color: #fff; margin-bottom: 16px; letter-spacing: -.3px; }
+.hero-info .meta-row { font-size: 13px; opacity: .75; line-height: 2; }
+.hero-info .meta-row strong { color: #fff; }
+.hero-info .tags { display: flex; gap: 8px; margin-top: 16px; flex-wrap: wrap; }
+.hero-info .tags span {
+  font-size: 11px; font-weight: 600; padding: 3px 10px;
+  border-radius: 20px; background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.12);
+}
+
+/* Ring */
+.ring { position: relative; width: 130px; height: 130px; flex-shrink: 0; }
+.ring svg { transform: rotate(-90deg); display: block; }
+.ring .r-text {
+  position: absolute; inset: 0; display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+}
+.ring .r-num { font-size: 30px; font-weight: 900; color: #fff; line-height: 1; }
+.ring .r-label { font-size: 10px; text-transform: uppercase; letter-spacing: 1.5px; opacity: .6; margin-top: 4px; font-weight: 600; }
+
+/* Stat line */
+.stats { display: flex; gap: 12px; margin-bottom: 40px; flex-wrap: wrap; }
+.stat {
+  flex: 1; min-width: 100px; background: var(--card); border: 1px solid var(--border);
+  border-radius: var(--r2); padding: 20px 22px; box-shadow: var(--sh);
+}
+.stat .num { font-size: 28px; font-weight: 800; letter-spacing: -1px; }
+.stat .lbl { font-size: 11px; color: var(--text2); margin-top: 4px; font-weight: 600; text-transform: uppercase; letter-spacing: .5px; }
+.stat.pass .num { color: var(--green); }
+.stat.fail .num { color: var(--red); }
+.stat.skip .num { color: var(--amber); }
+.stat.total .num { color: var(--accent); }
+
+/* Info cards */
+.info-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 32px; }
+@media (max-width: 768px) { .info-row { grid-template-columns: 1fr; } }
+.info-card {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: var(--r2); padding: 22px 26px; box-shadow: var(--sh);
+}
+.info-card h3 { font-size: 12px; text-transform: uppercase; letter-spacing: 1.2px; color: var(--text3); margin-bottom: 14px; font-weight: 700; }
+.plat-row, .src-row { display: flex; align-items: center; gap: 10px; padding: 6px 0; font-size: 13px; }
+.plat-row:not(:last-child) { border-bottom: 1px solid var(--border); padding-bottom: 10px; margin-bottom: 4px; }
+.plat-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.plat-name { font-weight: 600; flex-shrink: 0; }
+.plat-url { font-size: 11px; color: var(--text2); font-family: 'JetBrains Mono', monospace; word-break: break-all; }
+.plat-acct { font-size: 12px; color: var(--text3); padding-left: 18px; }
+.src-row { font-size: 13px; }
+.src-row a { color: var(--accent); text-decoration: none; font-weight: 500; }
+
+/* Section header */
+.sec-hd {
+  display: flex; align-items: baseline; gap: 10px;
+  margin-bottom: 20px; padding-bottom: 12px; border-bottom: 2px solid var(--border);
+}
+.sec-hd h2 { font-size: 18px; font-weight: 800; letter-spacing: -.3px; }
+.sec-hd .count { font-size: 13px; color: var(--text3); font-weight: 500; }
+
+/* Module cards */
+.mods { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 40px; }
+@media (max-width: 960px) { .mods { grid-template-columns: 1fr; } }
+.mod-card {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: var(--r2); overflow: hidden; box-shadow: var(--sh);
+  transition: box-shadow .2s;
+}
+.mod-card:hover { box-shadow: var(--sh2); }
+.mod-card.open { box-shadow: var(--sh2); }
+.mc-hd {
+  display: flex; align-items: center; padding: 16px 20px; gap: 12px;
+  cursor: pointer; user-select: none; transition: background .15s;
+}
+.mc-hd:hover { background: var(--card2); }
+.mc-icon { font-size: 22px; flex-shrink: 0; }
+.mc-info { flex: 1; min-width: 0; }
+.mc-name { font-size: 15px; font-weight: 700; display: flex; align-items: center; gap: 6px; }
+.mc-sep { color: var(--text3); font-weight: 400; }
+.mc-stats { font-size: 12px; color: var(--text2); margin-top: 2px; display: flex; gap: 8px; }
+.mc-stats .warn { color: var(--red); }
+.mc-stats .dim { color: var(--text3); }
+.mc-bar-bg { width: 80px; height: 5px; background: var(--card2); border-radius: 3px; overflow: hidden; flex-shrink: 0; }
+.mc-bar-fill { height: 100%; border-radius: 3px; transition: width .5s; }
+.mc-bar-fill.good { background: var(--green); }
+.mc-bar-fill.warn { background: var(--amber); }
+.mc-bar-fill.bad { background: var(--red); }
+.mc-rate { font-size: 15px; font-weight: 800; width: 48px; text-align: right; flex-shrink: 0; }
+.mc-rate.good { color: var(--green); }
+.mc-rate.warn { color: var(--amber); }
+.mc-rate.bad { color: var(--red); }
+.mc-chev { font-size: 12px; color: var(--text3); transition: transform .2s; flex-shrink: 0; }
+.mod-card.open .mc-chev { transform: rotate(90deg); }
+.mc-bd { display: none; border-top: 1px solid var(--border); }
+.mod-card.open .mc-bd { display: block; }
+
+/* Case items */
+.mc-bd { padding: 0 20px 14px 20px; }
+.case-item { border-bottom: 1px solid var(--card2); }
+.case-item:last-child { border-bottom: none; }
+.case-item.pass { --ci-accent: var(--green); }
+.case-item.fail { --ci-accent: var(--red); }
+.case-item.skip { --ci-accent: var(--amber); }
+.case-item.error { --ci-accent: #f97316; }
+.ci-hd {
+  display: flex; align-items: center; padding: 9px 20px 9px 20px;
+  gap: 10px; cursor: pointer; font-size: 13px; transition: background .12s;
+}
+.ci-hd:hover { background: var(--card2); }
+.ci-icon { flex-shrink: 0; font-size: 14px; }
+.ci-id { font-family: 'JetBrains Mono', monospace; font-size: 10.5px; color: var(--text3); width: 100px; flex-shrink: 0; }
+.ci-desc { flex: 1; font-weight: 500; min-width: 0; }
+.ci-note { font-size: 11px; color: var(--text3); flex-shrink: 0; max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ci-chev { font-size: 10px; color: var(--text3); transition: transform .2s; flex-shrink: 0; }
+.case-item.open .ci-chev { transform: rotate(90deg); }
+.case-item.open { background: var(--card2); }
+.case-item.open .ci-hd { background: transparent; }
+.case-item.fail .ci-hd, .case-item.error .ci-hd { background: #fef2f2; }
+.ci-bd { display: none; padding: 0 24px 18px 32px; }
+.case-item.open .ci-bd { display: block; }
+.ci-meta { display: flex; gap: 12px; font-size: 11px; color: var(--text3); margin-bottom: 8px; flex-wrap: wrap; }
+.ci-meta span { padding: 2px 8px; background: var(--card); border: 1px solid var(--border); border-radius: 4px; }
+.ci-note-text { font-size: 13px; color: var(--text2); margin-bottom: 12px; font-style: italic; }
+.ss-wrap { border-radius: 8px; overflow: hidden; border: 1px solid var(--border); margin-top: 8px; display: inline-block; max-width: 100%; }
+.ss-label { font-size: 10px; color: var(--text3); padding: 8px 12px; border-bottom: 1px solid var(--border); font-weight: 600; text-transform: uppercase; letter-spacing: .5px; }
+.ss-wrap img { display: block; max-width: 100%; max-height: 480px; }
+
+/* Tags */
+.tag {
+  font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: 4px;
+  letter-spacing: .3px; flex-shrink: 0;
+}
+.tag-doc { background: #dbeafe; color: #2563eb; }
+.tag-figma { background: #fce7f3; color: #db2777; }
+
+/* Footer */
+.footer {
+  text-align: center; color: var(--text3); font-size: 11px; padding: 32px;
+  border-top: 1px solid var(--border); margin-top: 16px;
+}
+
+@media (max-width: 768px) {
+  .wrap { padding: 24px 16px; }
+  .hero { padding: 28px 24px; }
+  .hero-grid { flex-direction: column; align-items: flex-start; gap: 24px; }
+  .stats { flex-wrap: wrap; }
+  .ci-hd { padding-left: 32px; flex-wrap: wrap; }
+  .ci-id { width: auto; }
+  .ci-note { display: none; }
+}
+@media print {
+  body { background: #fff; }
+  .mc-bd, .ci-bd, .case-item.open .ci-bd { display: block !important; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <!-- Top -->
+  <div class="topbar">
+    <h1>🧪 E2E 测试报告</h1>
+    <span class="ver">{{UUID}}</span>
+  </div>
+
+  <!-- Hero -->
+  <div class="hero">
+    <div class="hero-grid">
+      <div class="hero-info">
+        <div class="label">CodeChat 运营管理系统</div>
+        <h2>双平台全覆盖测试</h2>
+        <div class="meta-row">
+          <div>⏱ 执行时间：<strong>{{TIMESTAMP}}</strong></div>
+          <div>⏳ 总耗时：<strong>{{DURATION}}</strong></div>
+        </div>
+        <div class="tags">
+          <span>📄 需求文档 {{DOC_COUNT}} 条</span>
+          <span>📐 Figma {{FIGMA_COUNT}} 条</span>
+          <span>{{MODULE_COUNT}} 个模块</span>
+        </div>
+      </div>
+      <div class="ring">
+        <svg width="130" height="130" viewBox="0 0 130 130">
+          <circle cx="65" cy="65" r="57" fill="none" stroke="rgba(255,255,255,.12)" stroke-width="8"/>
+          <circle cx="65" cy="65" r="57" fill="none" stroke="url(#gr)" stroke-width="8"
+            stroke-dasharray="358.1" stroke-dashoffset="{{RATE_OFFSET}}" stroke-linecap="round"/>
+          <defs><linearGradient id="gr" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="#10b981"/>
+            <stop offset="100%" stop-color="#6366f1"/>
+          </linearGradient></defs>
+        </svg>
+        <div class="r-text">
+          <span class="r-num">{{RATE}}%</span>
+          <span class="r-label">通过率</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Stat cards -->
+  <div class="stats">
+    <div class="stat total"><div class="num">{{TOTAL}}</div><div class="lbl">用例总数</div></div>
+    <div class="stat pass"><div class="num">{{PASSED}}</div><div class="lbl">✅ 通过</div></div>
+    <div class="stat fail"><div class="num">{{FAILED}}</div><div class="lbl">❌ 失败</div></div>
+    <div class="stat skip"><div class="num">{{SKIPPED}}</div><div class="lbl">⏭️ 跳过</div></div>
+  </div>
+
+  <!-- Platform + Source info -->
+  <div class="info-row">
+    <div class="info-card">
+      <h3>🔗 测试平台</h3>
+      {{PLATFORM_CARDS}}
+    </div>
+    <div class="info-card">
+      <h3>📐 设计 & 需求来源</h3>
+      {{SOURCE_CARDS}}
+    </div>
+  </div>
+
+  <!-- Modules -->
+  <div class="sec-hd">
+    <h2>📦 模块测试结果</h2>
+    <span class="count">{{MODULE_COUNT}} 个模块</span>
+  </div>
+  <div class="mods">
+    {{MODULES}}
+  </div>
+
+  <!-- Footer -->
+  <div class="footer">
+    Generated by OpenClaw E2E Visual Test · {{TIMESTAMP}}
+  </div>
+</div>
+</body>
+</html>

@@ -21,6 +21,7 @@ def classify(case):
     system = case.get("system", "默认")
 
     rules = [
+        # Legacy patterns
         (r"LOGIN", "", "登录"),
         (r"ENT-00[1-5]", "team", "团队管理"),
         (r"ENT-01[0-1]", "sso", "SSO 登录配置"),
@@ -29,6 +30,16 @@ def classify(case):
         (r"OPS-001|OPS-002|OPS-003|CRUD-00[1-3]", "enterprise", "企业账号开通"),
         (r"OPS-01", "credits", "积分管理"),
         (r"OPS-02", "model", "模型配置"),
+        # TC-* patterns (from Figma + document generated plans)
+        (r"TC-TM-", "enterprise", "企业管理"),
+        (r"TC-SR-", "enterprise", "搜索筛选"),
+        (r"TC-CR-", "enterprise", "开通企业"),
+        (r"TC-PG-", "enterprise", "分页"),
+        (r"TC-DD-", "enterprise", "禁用企业"),
+        (r"TC-NV-", "credits", "运营平台"),
+        (r"TC-ET-", "team", "团队管理"),
+        (r"TC-SSO-", "sso", "SSO 登录配置"),
+        (r"TC-XP-", "enterprise", "跨平台验证"),
     ]
     for pat, mod_key, mod_label in rules:
         if re.search(pat, cid):
@@ -44,6 +55,21 @@ SYSTEM_COLORS = {"网易运营平台": ("#6366f1", "#eef2ff"),
 def platform_cards(meta):
     systems = meta.get("systems", [])
     if not systems:
+        # Try legacy meta format (admin/enterprise keys)
+        parts = []
+        for key in ["admin", "enterprise"]:
+            if key in meta:
+                color = "#6366f1" if key == "admin" else "#10b981"
+                name = "网易运营平台" if key == "admin" else "企业运营平台"
+                parts.append(f'''
+        <div class="plat-row">
+          <span class="plat-dot" style="background:{color}"></span>
+          <span class="plat-name">{name}</span>
+          <code class="plat-url">{meta[key].get("url","")}</code>
+        </div>
+        <div class="plat-acct">👤 {meta[key].get("email","")}</div>''')
+        if parts:
+            return "".join(parts)
         return f"<div>目标: {meta.get('url', '')}</div>"
     colors = ["#6366f1", "#10b981"]
     parts = []
@@ -79,7 +105,7 @@ def case_row(case, run_dir, compact=False):
     cid = case.get("id", "")
     status = case.get("status", "")
     si = {"pass": "✅", "fail": "❌", "skip": "⏭️", "error": "⚠️"}.get(status, "❓")
-    desc = case.get("description") or case.get("note", "")
+    desc = case.get("description") or case.get("name") or case.get("note", "")
     note = case.get("note", "")
     source = case.get("source", "")
     sys_name = case.get("system", "")

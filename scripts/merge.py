@@ -10,7 +10,10 @@ def main(run_id: str):
     for f in sorted(glob.glob(os.path.join(run_dir, "results-*.yaml"))):
         with open(f) as fh:
             data = yaml.safe_load(fh)
-            if isinstance(data, list):
+            if isinstance(data, dict):
+                items = data.get('results', data.get('cases', []))
+                all_results.extend(items)
+            elif isinstance(data, list):
                 all_results.extend(data)
 
     all_results.sort(key=lambda r: r.get("id", ""))

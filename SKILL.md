@@ -46,7 +46,7 @@ Snapshot-based E2E testing engine. AI judges via aria text snapshots; screenshot
 - CRUD 三连严格排序：Create → Verify → Cleanup（中间不能插入其他 flow）
 - 同一 flow 内，前置 case 的状态变更（如创建了一条数据）供后续 case 使用
 - 跨平台 flow：先管理员平台 → 再企业平台（管理员创建的数据供企业平台验证）
-- Display plan for user confirmation; proceed on user OK
+- Display brief plan summary, then auto-proceed to Phase 3 without waiting for user confirmation
 
 ### Phase 3: Unified Login（统一登录）
 **用例确认后，主 session 统一登录所有平台，全程一个 Chrome 实例。**

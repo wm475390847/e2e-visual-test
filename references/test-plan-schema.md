@@ -1,3 +1,27 @@
+# meta.yaml
+
+```yaml
+uuid: string
+title: string
+url: string
+started_at: string
+# 🔴 设计来源（report.py 渲染来源卡片用）
+sources:
+  figma: "https://www.figma.com/design/xxx"
+  document: "https://docs.popo.netease.com/xxx"
+# 🔴 系统列表（report.py 渲染平台卡片用；accounts 数组也兼容）
+systems:
+  - name: string
+    url: string
+    account: string
+# 兼容格式
+accounts:
+  - system: string
+    url: string
+    email: string
+    password: string
+```
+
 # test-plan.yaml
 
 ```yaml
@@ -10,7 +34,7 @@ flows:
       navigate: string    # URL fragment like /members
     cases:
       - id: TC-001
-        source: user | ai | figma
+        source: user | ai | document | figma  # 🔴 从需求文档派生的写 document，Figma 派生写 figma
         category: navigation | presence | form | interaction | table | dialog | error | regression
         description: string
         action: click | type | navigate | select | submit_empty | verify_element | verify_nav | check_missing | flow
@@ -27,7 +51,8 @@ standalone:
 
 ```yaml
 - id: TC-001
-  source: user | ai | figma
+  system: string           # 🔴 必填！平台名（网易运营平台 / 企业运营平台）
+  source: user | ai | document | figma
   status: pass | fail | skip | error
   duration_ms: int
   note: string

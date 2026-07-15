@@ -15,10 +15,35 @@ def encode_image(path):
     return f"data:image/{ext};base64,{b64}"
 
 # ── Module classifier ──────────────────────────────────
+def detect_system(case):
+    """Detect platform system from case fields."""
+    # Explicit field takes priority
+    system = case.get("system", "")
+    if system:
+        return system
+    # Detect from description + note + flow context
+    desc = (case.get("description") or "") + " " + (case.get("note") or "")
+    if re.search(r'运营平台|admin|ops|opera|管理员平台', desc, re.I):
+        return "网易运营平台"
+    if re.search(r'企业平台|enterprise|member|wangmin|团队管理|企业运营', desc, re.I):
+        return "企业运营平台"
+    # Detect from TC-ID range (TC-001-TC-026 → 运营平台, TC-027-TC-040 → 企业平台)
+    m = re.match(r'TC-(\d+)', case.get("id", ""))
+    if m:
+        n = int(m.group(1))
+        if n <= 26:
+            return "网易运营平台"
+        elif n <= 40:
+            return "企业运营平台"
+    return "默认"
+
+
 def classify(case):
     """Return (system, module_key, module_label)"""
     cid = case.get("id", "")
-    system = case.get("system", "默认")
+    desc = (case.get("description") or "").lower()
+    note = (case.get("note") or "").lower()
+    system = detect_system(case)
 
     rules = [
         # Legacy patterns
@@ -44,6 +69,21 @@ def classify(case):
     for pat, mod_key, mod_label in rules:
         if re.search(pat, cid):
             return system, mod_key, mod_label
+
+    # Fallback: keyword matching on description + note for simple TC-IDs
+    desc_text = desc + " " + note
+    keywords = [
+        (r"登录|login", "", "登录"),
+        (r"团队|成员|member|邀请|审核|已拒绝|编辑角色", "team", "团队管理"),
+        (r"sso|单点", "sso", "SSO 登录配置"),
+        (r"积分|credits|消耗|充值|系数|调用次数|日期汇总|用户汇总", "credits", "积分管理"),
+        (r"模型|model", "model", "模型配置"),
+        (r"企业|开通|禁用|启用|c.r.u.d|重置密码|清理|cleanup|e2e_", "enterprise", "企业账号开通"),
+        (r"导航|首页|侧边|导航栏", "layout", "通用布局"),
+    ]
+    for pat, mod_key, mod_label in keywords:
+        if re.search(pat, desc_text):
+            return system, mod_key, mod_label
     return system, "other", "其他"
 
 ICONS = {"登录": "🔐", "团队管理": "👥", "SSO 登录配置": "🔑", "积分管理": "💰",
@@ -55,21 +95,35 @@ SYSTEM_COLORS = {"网易运营平台": ("#6366f1", "#eef2ff"),
 def platform_cards(meta):
     systems = meta.get("systems", [])
     if not systems:
-        # Try legacy meta format (admin/enterprise keys)
-        parts = []
+        # Try legacy accounts format
+        accounts = meta.get("accounts", [])
+        if accounts:
+            colors = ["#6366f1", "#10b981"]
+            parts = []
+            for i, a in enumerate(accounts):
+                c = colors[i % len(colors)]
+                sys_name = a.get("system", a.get("nickname", f"系统{i+1}"))
+                url = a.get("url", a.get("login_url", ""))
+                parts.append(f'''
+        <div class="plat-row">
+          <span class="plat-dot" style="background:{c}"></span>
+          <span class="plat-name">{sys_name}</span>
+          <code class="plat-url">{url}</code>
+        </div>
+        <div class="plat-acct">👤 {a.get("email","")}</div>''')
+            return "".join(parts)
+        # Legacy fallback for old meta format
         for key in ["admin", "enterprise"]:
             if key in meta:
                 color = "#6366f1" if key == "admin" else "#10b981"
                 name = "网易运营平台" if key == "admin" else "企业运营平台"
-                parts.append(f'''
+                return f'''
         <div class="plat-row">
           <span class="plat-dot" style="background:{color}"></span>
           <span class="plat-name">{name}</span>
           <code class="plat-url">{meta[key].get("url","")}</code>
         </div>
-        <div class="plat-acct">👤 {meta[key].get("email","")}</div>''')
-        if parts:
-            return "".join(parts)
+        <div class="plat-acct">👤 {meta[key].get("email","")}</div>'''
         return f"<div>目标: {meta.get('url', '')}</div>"
     colors = ["#6366f1", "#10b981"]
     parts = []
@@ -88,17 +142,29 @@ def source_cards(meta):
     sources = meta.get("sources", {})
     parts = []
     if sources.get("figma"):
-        parts.append(f'<div class="src-row">📐 <a href="{sources["figma"]}" target="_blank">Figma 设计稿</a></div>')
+        parts.append(f'<div class="src-row">\U0001f3a8 <a href="{sources["figma"]}" target="_blank">Figma \u8bbe\u8ba1\u7a3f</a></div>')
     if sources.get("document"):
-        parts.append(f'<div class="src-row">📄 {sources["document"]}</div>')
-    return "".join(parts) if parts else "<div class='src-row'>—</div>"
+        parts.append(f'<div class="src-row">\U0001f4c4 <a href="{sources["document"]}" target="_blank">\u9700\u6c42\u6587\u6863</a></div>')
+    if not parts:
+        return "<div class='src-row' style='color:var(--text3); font-style:italic'>\u672a\u63d0\u4f9b\u8bbe\u8ba1\u7a3f/\u9700\u6c42\u6587\u6863\u94fe\u63a5\uff08\u8bf7\u5728 meta.yaml \u4e2d\u6dfb\u52a0 sources \u5b57\u6bb5\uff09</div>"
+    return "".join(parts)
 
 def case_screenshot(case, run_dir):
     ss = case.get("screenshot") or case.get("screenshots")
+    # Handle string path
     if isinstance(ss, str) and ss:
         data = encode_image(os.path.join(run_dir, ss))
         if data:
             return f'<div class="ss-wrap"><div class="ss-label">📸 截图</div><img src="{data}" loading="lazy"></div>'
+    # Handle dict with before/after (worker output format)
+    if isinstance(ss, dict):
+        parts = []
+        for label, path in [("操作前", ss.get("before")), ("操作后", ss.get("after"))]:
+            if path:
+                data = encode_image(os.path.join(run_dir, path))
+                if data:
+                    parts.append(f'<div class="ss-wrap"><div class="ss-label">📸 {label}</div><img src="{data}" loading="lazy"></div>')
+        return "".join(parts)
     return ""
 
 def case_row(case, run_dir, compact=False):
@@ -108,7 +174,7 @@ def case_row(case, run_dir, compact=False):
     desc = case.get("description") or case.get("name") or case.get("note", "")
     note = case.get("note", "")
     source = case.get("source", "")
-    sys_name = case.get("system", "")
+    sys_name = case.get("system", "") or detect_system(case)
 
     tag = ""
     if source == "document":
@@ -247,18 +313,24 @@ def main(run_id: str):
     rate = round(passed / total * 100, 1) if total > 0 else 0
     doc_cases = sum(1 for r in results if r.get("source") == "document")
     figma_cases = sum(1 for r in results if r.get("source") == "figma")
+    # Fallback: if meta has sources but no cases tagged, use total as count
+    if doc_cases == 0 and meta.get("sources", {}).get("document"):
+        doc_cases = total
+    if figma_cases == 0 and meta.get("sources", {}).get("figma"):
+        figma_cases = total
 
     # Ring: circumference 2*pi*34 ≈ 213.6, dashoffset for remaining
     rate_offset = round(213.6 * (1 - rate / 100), 1)
 
     tz = timezone(timedelta(hours=8))
-    duration = "N/A"
-    if meta.get("started_at"):
-        start = datetime.fromisoformat(meta["started_at"])
-        elapsed = datetime.now(tz) - start
-        mins = int(elapsed.total_seconds() // 60)
-        secs = int(elapsed.total_seconds() % 60)
+    # Use sum of case durations (accurate) instead of wall-clock gap
+    total_ms = sum(r.get("duration_ms", 0) for r in results)
+    if total_ms > 0:
+        mins = int(total_ms // 60000)
+        secs = int((total_ms % 60000) // 1000)
         duration = f"{mins}m {secs}s"
+    else:
+        duration = "N/A"
 
     mod_cards_html, module_count = module_cards(results, run_dir)
 

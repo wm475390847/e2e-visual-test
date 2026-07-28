@@ -28,8 +28,12 @@ Snapshot-based E2E testing engine. AI judges via aria text snapshots; screenshot
 **纯文档分析，不打开浏览器。**
 
 - 从用户输入中提取 Figma 链接、需求文档链接、平台地址
-- 并行拉取 Figma 结构 + 需求文档内容
-- Figma：调用 `figma__get_figma_data` 获取设计稿节点树 → 识别页面布局、组件、交互状态（对话框、开关、弹窗等）
+- 🔴 **Figma 数据拉取必须遵守 `references/figma-integration.md` 中的 API 使用规范**：
+  - 使用 `figma__get_figma_data(fileKey, nodeId, depth=6)` 一次性拉取完整节点树
+  - 禁止并发调用 Figma API，所有调用串行且间隔 ≥2 秒
+  - 收到 429 限流后等待 Retry-After 秒数，禁止提前重试
+  - 数据必须完整后才能生成用例，禁止让用户补充设计细节
+- Figma：识别页面布局、组件、交互状态（对话框、开关、弹窗等）
 - 需求文档：提取功能模块、业务流程、表单字段、校验规则
 - 交叉对比 Figma 设计 + 需求文档 → 生成覆盖用例：
   - **页面基础用例**：每个页面/标签页的元素存在性、核心组件
@@ -48,21 +52,39 @@ uuid: string
 title: string
 url: string
 started_at: string
-# 设计稿与需求文档来源（report.py 渲染平台卡片/来源卡片用）
+# 设计稿与需求文档来源（report.py 渲染来源卡片用）
 sources:
   figma: "https://www.figma.com/design/xxx"   # Figma 设计稿链接
-  document: "https://docs.popo.netease.com/xxx" # 需求文档链接（POPO/Notion/语雀等）
-# 系统列表（report.py 渲染平台卡片用）
+  document: "https://docs.xxx.com/xxx"          # 需求文档链接（任意平台）
+# 系统列表（report.py 渲染平台卡片用，支持任意数量系统）
 systems:
-  - name: 网易运营平台
-    url: https://neteasecc.codewave-test.163yun.com
-    account: admin@codechat.netease.com
-  - name: 企业运营平台
-    url: https://codechat.codewave-test.163yun.com
-    account: wangmin18@corp.netease.com
-# 兼容格式：accounts 数组也支持（report.py 有 fallback）
+  - name: 运营后台               # 系统名称
+    url: https://admin.example.com
+    account: admin@example.com
+    color: "#6366f1"            # 可选，平台主色；不填自动从调色板分配
+  - name: 用户端
+    url: https://app.example.com
+    account: user@example.com
+# 模块定义（report.py 用例分类依据，完全配置驱动）
+modules:
+  - key: enterprise              # 模块 key
+    label: 企业管理               # 模块显示名
+    icon: "🏢"                   # emoji 图标
+    system: 运营后台              # 所属系统（对应 systems[].name）
+    order: 1                     # 显示排序
+    keywords:                    # 关键词匹配（用于未标记 system/module 的旧用例）
+      - "企业|开通|禁用"
+    tc_range:                    # TC-ID 号段匹配
+      - [1, 26]
+# 安全配置（可选）
+safety:
+  skip_keywords:                # 测试中禁止交互的按钮关键词
+    - "退出登录"
+    - "注销"
+    - "delete"
+# 兼容旧格式：accounts 数组也支持（report.py 有 fallback）
 accounts:
-  - system: 网易运营平台
+  - system: 运营后台
     url: https://xxx
     email: admin@xxx
     password: xxx
@@ -161,7 +183,7 @@ cases:
 
 ```yaml
 - id: TC-XXX
-  system: <平台名>   # 🔴 必填！网易运营平台 / 企业运营平台（report.py detect_system() 作为 fallback）
+  system: <平台名>   # 🔴 必填！对应 meta.systems[].name
   source: ai | document | figma  # 🔴 从 test-plan 继承，不可全部填 ai
   status: pass | fail | skip
   duration_ms: <数字>
